@@ -1,0 +1,41 @@
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: wavelink-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wavelink
+      POSTGRES_PASSWORD: wavelink_dev_pw
+      POSTGRES_DB: wavelink
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: wavelink-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: wavelink-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: wavelink
+      RABBITMQ_DEFAULT_PASS: wavelink_dev_pw
+    ports:
+      - '5672:5672'   # AMQP protocol port — your NestJS app connects here
+      - '15672:15672' # Management UI — you open this in a browser
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

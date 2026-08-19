@@ -4,10 +4,101 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum RoleType {
+  ADMIN
+  MEMBER
+}
+
+enum MessageType {
+  FILE
+  MEDIA
+  TEXT
+}
+
+enum MessageStatus {
+  SENT
+  READ
+  DELIVERED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime
+  avatarUrl    String?
+
+  message Message[]
+
+  conversationParticipants ConversationParticipant[]
+
+  messageRecipients MessageRecipient[]
+}
+
+model Conversation {
+  id             String           @id @default(uuid())
+  type           ConversationType
+  name           String?
+  groupAvatarUrl String?
+  createdAt      DateTime
+
+  conversationParticipants ConversationParticipant[]
+  messages                 Message[]
+}
+
+model ConversationParticipant {
+  role              RoleType
+  lastReadMessageId String?
+  joinedAt          DateTime
+  conversationId    String
+  userId            String
+
+  message      Message?     @relation(fields: [lastReadMessageId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@id([conversationId, userId])
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  content        String
+  senderId       String
+  conversationId String
+  type           MessageType
+  createdAt      DateTime
+  updatedAt      DateTime?
+  deletedAt      DateTime?
+
+  conversationParticipants ConversationParticipant[]
+
+  messageRecipients MessageRecipient[]
+
+  sender       User         @relation(fields: [senderId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+}
+
+model MessageRecipient {
+  status    MessageStatus
+  messageId String
+  userId    String
+  updatedAt DateTime
+
+  message Message @relation(fields: [messageId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@id([userId, messageId])
 }

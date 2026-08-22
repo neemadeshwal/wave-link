@@ -38,7 +38,7 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
-  createdAt    DateTime
+  createdAt    DateTime @default(now())
   avatarUrl    String?
 
   message Message[]
@@ -53,7 +53,7 @@ model Conversation {
   type           ConversationType
   name           String?
   groupAvatarUrl String?
-  createdAt      DateTime
+  createdAt      DateTime @default(now())
 
   conversationParticipants ConversationParticipant[]
   messages                 Message[]
@@ -62,7 +62,7 @@ model Conversation {
 model ConversationParticipant {
   role              RoleType
   lastReadMessageId String?
-  joinedAt          DateTime
+  joinedAt          DateTime @default(now())
   conversationId    String
   userId            String
 
@@ -79,9 +79,9 @@ model Message {
   senderId       String
   conversationId String
   type           MessageType
-  createdAt      DateTime
-  updatedAt      DateTime?
-  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime? @default(now())
+  deletedAt      DateTime? @default(now())
 
   conversationParticipants ConversationParticipant[]
 
@@ -95,7 +95,7 @@ model MessageRecipient {
   status    MessageStatus
   messageId String
   userId    String
-  updatedAt DateTime
+  updatedAt DateTime @default(now())
 
   message Message @relation(fields: [messageId], references: [id])
   user    User    @relation(fields: [userId], references: [id])

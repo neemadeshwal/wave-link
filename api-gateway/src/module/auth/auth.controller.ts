@@ -25,11 +25,23 @@ export class AuthController {
   // swagger UI . But swagger was not told which endpoints actually need that token.
 
   // @ApiBearerAuth() so even though feeding the swagger with token , swagger ui didnt know that
-  // /auth/me required the token so it never sent the authroization header with your request. 
+  // /auth/me required the token so it never sent the authroization header with your request.
   // Your backend got a request without a token -> 401 unauthorized.
-   @ApiBearerAuth() 
+  @ApiBearerAuth()
   @UseGuards(jwtAuthGuard)
   getMe(@CurrentUser() user: { sub: string; email: string }) {
     return user;
   }
+
+  // 1. Request hits protected route without Authorization header
+  // 2. JwtAuthGuard runs
+  // 3. JwtStrategy tries to extract token:
+  //    - ExtractJwt.fromAuthHeaderAsBearerToken() looks for Authorization header
+  //    - Header doesn't exist → extraction returns null/undefined
+  // 4. Passport checks: "is there a token to validate?"
+  //    - No token found
+  //    - The guard requires authentication
+  // 5. Passport throws UnauthorizedException (401)
+  // 6. @CurrentUser() decorator is NEVER reached
+  //    - The request dies at the guard level
 }

@@ -53,10 +53,17 @@ model Conversation {
   type           ConversationType
   name           String?
   groupAvatarUrl String?
+  // Here you can see are defining pariticapnt 1 and pariticpant 2 as fields and in conversationParticipant also
+  // This adds redundancy but if this not done then we have to put the check in app level which can be miseed by dev
+  // So even though redudnat if are still using it in two places just to create and enfore db to have uniqueness in the conversation.
+  participant1Id String?
+  participant2Id String?
   createdAt      DateTime @default(now())
 
   conversationParticipants ConversationParticipant[]
   messages                 Message[]
+
+  @@unique([type,participant1Id,participant2Id])
 }
 
 model ConversationParticipant {

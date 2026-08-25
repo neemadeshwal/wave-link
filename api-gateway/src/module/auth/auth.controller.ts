@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { CreateUserDto } from 'src/common/dto/create-user.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { jwtAuthGuard } from './guards/jwt-auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('auth')
@@ -28,7 +28,7 @@ export class AuthController {
   // /auth/me required the token so it never sent the authroization header with your request.
   // Your backend got a request without a token -> 401 unauthorized.
   @ApiBearerAuth()
-  @UseGuards(jwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   getMe(@CurrentUser() user: { sub: string; email: string }) {
     return user;
   }

@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 
@@ -61,10 +62,28 @@ export class UsersService {
           email,
         },
       });
+      if (!user) throw new NotFoundException('user donot exist with this email');
 
       return user;
     } catch (e) {
+      if (e instanceof NotFoundException) throw e;
+
       throw new InternalServerErrorException('Failed to fetch user');
+    }
+  }
+
+  async findById(id: string) {
+    try {
+      const user = await this.dbService.user.findUnique({
+        where: {
+          id,
+        },
+      });
+      if (!user) throw new NotFoundException('user donot exist with this id');
+      return user;
+    } catch (e) {
+      if (e instanceof NotFoundException) throw e;
+      throw new InternalServerErrorException('Failed to fetch user.');
     }
   }
 }

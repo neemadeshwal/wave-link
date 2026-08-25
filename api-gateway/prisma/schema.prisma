@@ -87,8 +87,8 @@ model Message {
   conversationId String
   type           MessageType
   createdAt      DateTime @default(now())
-  updatedAt      DateTime? @default(now())
-  deletedAt      DateTime? @default(now())
+  updatedAt      DateTime? 
+  deletedAt      DateTime? 
 
   conversationParticipants ConversationParticipant[]
 

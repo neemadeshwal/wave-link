@@ -7,6 +7,7 @@ import { AuthModule } from './module/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { envValidationSchema } from './module/config/env.validation';
 import { ConversationsModule } from './module/conversations/conversations.module';
+import { MessageModule } from './module/message/message.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ConversationsModule } from './module/conversations/conversations.module
     DatabaseModule,
     AuthModule,
     ConversationsModule,
+    MessageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

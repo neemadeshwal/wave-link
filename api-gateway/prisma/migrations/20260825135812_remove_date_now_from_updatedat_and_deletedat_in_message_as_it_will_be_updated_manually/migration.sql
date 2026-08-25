@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Message" ALTER COLUMN "updatedAt" DROP DEFAULT,
+ALTER COLUMN "deletedAt" DROP DEFAULT;

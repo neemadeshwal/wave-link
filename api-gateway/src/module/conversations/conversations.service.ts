@@ -44,23 +44,22 @@ export class ConversationsService {
         );
       }
       // Array syntax
-      // About transactions , the most simple way to write transactions is by, 
-      // Array syntax which bascially means to execute all the operations in array 
+      // About transactions , the most simple way to write transactions is by,
+      // Array syntax which bascially means to execute all the operations in array
       // atomically. But all three operations are prepared before the execution starts ,
       // So the excution happens in parallel (concurrently) and not one after the other.
 
       // The problem wit this appracoh is that as the second and third operations depend on the
-      // conversationId in the first , but first hasn't finished, 
+      // conversationId in the first , but first hasn't finished,
 
       // Callback Syntax
       // To solve this issue , we run the async func as a single transc first.
       // Tx is the transactional client - same as this.dbservic but locked to this transaction
-      // execution happens sequentially and benefit , each operation can use results from the previous 
+      // execution happens sequentially and benefit , each operation can use results from the previous
       // operations. await tx.conversation.create() waits for the conversation to be created, stores it in conversation variable.
 
-      // Now the rest two operations can use conversation.id, now it exists , and return the conversaton at the end deremines the 
-     // whole transcation returns
-
+      // Now the rest two operations can use conversation.id, now it exists , and return the conversaton at the end deremines the
+      // whole transcation returns
 
       // 4. Create all the three rows atomically
       const result = await this.dbService.$transaction(async (tx) => {
@@ -91,16 +90,28 @@ export class ConversationsService {
         });
         return conversation;
       });
-        return result;
-
+      return result;
     } catch (e) {
       if (e instanceof NotFoundException) throw e;
 
       if (e instanceof ConflictException) throw e;
 
       if (e instanceof BadRequestException) throw e;
-        console.log(e);
+      console.log(e);
       throw new InternalServerErrorException('internal error occured.');
     }
+  }
+
+  async isParticipant(
+    conversationId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const participant = await this.dbService.conversationParticipant.findFirst({
+      where: {
+        conversationId,
+        userId,
+      },
+    });
+    return !!participant;
   }
 }

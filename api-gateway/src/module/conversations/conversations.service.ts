@@ -73,6 +73,12 @@ export class ConversationsService {
           },
         });
 
+        // One more thing, since the unique constraint is ordered, always normalize the so that 
+        // if B goes instead of A it wont create a duplicate. 
+
+        // Ordering normalization for bidirectional relationships
+        // TODO: add normalization for participants. 
+
         await tx.conversationParticipant.create({
           data: {
             role: RoleType.MEMBER,

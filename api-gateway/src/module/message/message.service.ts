@@ -23,7 +23,9 @@ export class MessageService {
       );
 
       if (!isParticipant) throw new ForbiddenException('Not a participant');
-
+      // What is somebody hacks the conversation they are not part of .And also bypass isParticpant pass, what will be the db level defense in this.
+      // Nothing is there right now , so TODO : db level defense would be to foreign key constraint . Add that later.
+      
       const message = await this.dbService.$transaction(async (tx) => {
         const message = await tx.message.create({
           data: {

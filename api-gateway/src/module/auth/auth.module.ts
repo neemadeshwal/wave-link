@@ -35,5 +35,13 @@ import { JwtStrategy } from './strategy/jwt.strategy';
 // Without it in providers, it's never instantiated, Passport never knows about it, and you get "Unknown authentication strategy 'jwt'" error
 
   providers: [AuthService,JwtStrategy],
+
+  /// export we can also do of providers and reimports
+  // Here as chat module also want jwt so isntead of building it new instance for that we are 
+  // passing the same instance , as we used in the auth module , for reusability ,
+  // This is also not a good approach as now chat module have the exntire access of authmodule  instead of just the jwtmodule  so that removes the encaspuslation  . 
+ // To solve this issue we actually can make a common jwtmodule witn instance and use that shared module in multiple places for eg; in auth module, in chat module
+ // TODO : In refactoring please make a separate jwt module and let other import it.
+  exports:[JwtModule]
 })
 export class AuthModule {}

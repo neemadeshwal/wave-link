@@ -1,13 +1,18 @@
 import {
+  ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   OnGatewayInit,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { UnauthorizedException } from '@nestjs/common';
+import { ConversationsService } from '../conversations/conversations.service';
 
 @WebSocketGateway({
   namespace: '/chat',
@@ -24,6 +29,7 @@ export class ChatGateway
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
+    private conversationService: ConversationsService,
   ) {}
   @WebSocketServer()
   server!: Server;
@@ -34,7 +40,7 @@ export class ChatGateway
 
     server.use((socket, next) => {
       // const token = socket.handshake.auth.token;
-        const token = socket.handshake.auth.token || socket.handshake.query.token;
+      const token = socket.handshake.auth.token || socket.handshake.query.token;
       if (!token) return next(new Error('Unauthorized'));
 
       try {
@@ -55,5 +61,46 @@ export class ChatGateway
 
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
+  }
+
+  @SubscribeMessage('conversation:join')
+  async handleJoinConversation(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversationId: string },
+  ) {
+    try {
+      const conversationId = data.conversationId;
+      const userId = client.data.user.sub;
+
+      if (!conversationId || !userId)
+        throw new UnauthorizedException(
+          'You are not authorized for this conversation.',
+        );
+
+      const isParticipant = await this.conversationService.isParticipant(
+        conversationId,
+        userId,
+      );
+
+      if (!isParticipant)
+        throw new UnauthorizedException(
+          'You are not part of this conversation.',
+        );
+
+      client.join(conversationId);
+
+      return { success: true };
+    } catch (e) {
+      // NOTE:  since we are returning the error event we cant
+      // simply use the throw because if we do that it will go through the nestjs exception filter 
+      // and socket response wont know the error happenend so always return so that even error will 
+      // be send like a proper response.
+      if (e instanceof UnauthorizedException)
+        return {
+          success: false,
+          error: e.message,
+        };
+      return { success: false, error: 'Internal server error' };
+    }
   }
 }

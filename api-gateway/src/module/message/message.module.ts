@@ -8,5 +8,6 @@ import { ConversationsModule } from '../conversations/conversations.module';
   imports:[ConversationsModule],
   controllers: [MessageController],
   providers: [MessageService],
+  exports:[MessageService]
 })
 export class MessageModule {}

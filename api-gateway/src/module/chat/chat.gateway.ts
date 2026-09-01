@@ -11,10 +11,16 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, UnauthorizedException, ValidationPipe } from '@nestjs/common';
 import { ConversationsService } from '../conversations/conversations.service';
+import { MessageType } from '@prisma/client';
+import { MessageService } from '../message/message.service';
+import { CreateMessageDto } from '../message/dto/create-message.dto';
 
 @WebSocketGateway({
+   cors: {
+    origin: '*',  // for local testing only — never use '*' in production
+  },
   namespace: '/chat',
 })
 // why onGatewayinit was also implemented.
@@ -30,6 +36,7 @@ export class ChatGateway
     private jwtService: JwtService,
     private configService: ConfigService,
     private conversationService: ConversationsService,
+    private messageService: MessageService,
   ) {}
   @WebSocketServer()
   server!: Server;
@@ -92,8 +99,8 @@ export class ChatGateway
       return { success: true };
     } catch (e) {
       // NOTE:  since we are returning the error event we cant
-      // simply use the throw because if we do that it will go through the nestjs exception filter 
-      // and socket response wont know the error happenend so always return so that even error will 
+      // simply use the throw because if we do that it will go through the nestjs exception filter
+      // and socket response wont know the error happenend so always return so that even error will
       // be send like a proper response.
       if (e instanceof UnauthorizedException)
         return {
@@ -101,6 +108,51 @@ export class ChatGateway
           error: e.message,
         };
       return { success: false, error: 'Internal server error' };
+    }
+  }
+  // TODO: Phase 2 gap - @MessageBody() does not auto-validate like HTTP @Body() does,
+// since app.useGlobalPipes() only applies to the HTTP pipeline, not WebSocket.
+// Fix: apply ValidationPipe explicitly per-handler (@MessageBody(new ValidationPipe()) dto: CreateMessageDto)
+// or @UsePipes(ValidationPipe) at the gateway class level. Also need a WsExceptionFilter
+// to convert validation failures into the {success:false, error:...} ack shape instead of
+// the default generic 'exception' event.
+
+  @SubscribeMessage('message:send')
+  async handleMessageSentEvent(
+    @ConnectedSocket() client: Socket,
+    // Notice - here you have actually passed the validationpipe() instance unlike in http
+    // Reason- we are already adding the newvaldiatonpiop() in global in app.ts now that way we dont have to handle it as class level
+    // But that validationPipe() is only for http transport layer
+    // For ws since it wont handle it on its own or catch the eror we pass it explicitly
+    @MessageBody(new ValidationPipe())
+    data: CreateMessageDto 
+  ) {
+    try {
+      // We donot have to again check this i guess about that whether the conversationId or senderId exist or not ??
+      const conversationId = data.conversationId;
+      const senderId = client.data.user.sub;
+
+      // if(!conversationId||!userId) throw new UnauthorizedException('You are not authorized for sending the message.');
+
+      // should i have to manuallly check the content also cant messagebody() pipe handle it automcaticallly .
+
+      const createMessageObj = {
+        conversationId,
+        type: data.type,
+        content: data.content,
+      };
+
+      const message = await this.messageService.create(
+        createMessageObj,
+        senderId,
+      );
+
+      this.server.to(conversationId).emit('message:new',message)
+
+      return { success: true, message };
+    } catch (e) {
+
+      return { success: false, error: (e instanceof NotFoundException || e instanceof BadRequestException) ? e.message :'Internal server error'};
     }
   }
 }

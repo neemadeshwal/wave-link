@@ -11,15 +11,20 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException, NotFoundException, UnauthorizedException, ValidationPipe } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  UnauthorizedException,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ConversationsService } from '../conversations/conversations.service';
 import { MessageType } from '@prisma/client';
 import { MessageService } from '../message/message.service';
 import { CreateMessageDto } from '../message/dto/create-message.dto';
 
 @WebSocketGateway({
-   cors: {
-    origin: '*',  // for local testing only — never use '*' in production
+  cors: {
+    origin: '*', // for local testing only — never use '*' in production
   },
   namespace: '/chat',
 })
@@ -111,11 +116,11 @@ export class ChatGateway
     }
   }
   // TODO: Phase 2 gap - @MessageBody() does not auto-validate like HTTP @Body() does,
-// since app.useGlobalPipes() only applies to the HTTP pipeline, not WebSocket.
-// Fix: apply ValidationPipe explicitly per-handler (@MessageBody(new ValidationPipe()) dto: CreateMessageDto)
-// or @UsePipes(ValidationPipe) at the gateway class level. Also need a WsExceptionFilter
-// to convert validation failures into the {success:false, error:...} ack shape instead of
-// the default generic 'exception' event.
+  // since app.useGlobalPipes() only applies to the HTTP pipeline, not WebSocket.
+  // Fix: apply ValidationPipe explicitly per-handler (@MessageBody(new ValidationPipe()) dto: CreateMessageDto)
+  // or @UsePipes(ValidationPipe) at the gateway class level. Also need a WsExceptionFilter
+  // to convert validation failures into the {success:false, error:...} ack shape instead of
+  // the default generic 'exception' event.
 
   @SubscribeMessage('message:send')
   async handleMessageSentEvent(
@@ -125,7 +130,7 @@ export class ChatGateway
     // But that validationPipe() is only for http transport layer
     // For ws since it wont handle it on its own or catch the eror we pass it explicitly
     @MessageBody(new ValidationPipe())
-    data: CreateMessageDto 
+    data: CreateMessageDto,
   ) {
     try {
       // We donot have to again check this i guess about that whether the conversationId or senderId exist or not ??
@@ -147,12 +152,42 @@ export class ChatGateway
         senderId,
       );
 
-      this.server.to(conversationId).emit('message:new',message)
+      this.server.to(conversationId).emit('message:new', message);
 
       return { success: true, message };
     } catch (e) {
-
-      return { success: false, error: (e instanceof NotFoundException || e instanceof BadRequestException) ? e.message :'Internal server error'};
+      return {
+        success: false,
+        error:
+          e instanceof NotFoundException || e instanceof BadRequestException
+            ? e.message
+            : 'Internal server error',
+      };
     }
+  }
+
+  @SubscribeMessage('typing:start')
+  handleTypingStart(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversationId: string },
+  ) {
+    const conversationId = data.conversationId;
+    const senderId = client.data.user.sub;
+    client.broadcast
+      .to(conversationId)
+      .emit('typing:start', { userId: senderId });
+  }
+
+  @SubscribeMessage('typing:stop')
+  handleTypingEnd(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversationId: string },
+  ) {
+    const conversationId = data.conversationId;
+    const senderId = client.data.user.sub;
+
+    client.broadcast
+      .to(conversationId)
+      .emit('typing:stop', { userId: senderId });
   }
 }

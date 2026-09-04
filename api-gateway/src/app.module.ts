@@ -9,6 +9,7 @@ import { envValidationSchema } from './module/config/env.validation';
 import { ConversationsModule } from './module/conversations/conversations.module';
 import { MessageModule } from './module/message/message.module';
 import { ChatModule } from './module/chat/chat.module';
+import { RedisModule } from './module/redis/redis.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ChatModule } from './module/chat/chat.module';
     ConversationsModule,
     MessageModule,
     ChatModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -18,9 +18,9 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ConversationsService } from '../conversations/conversations.service';
-import { MessageType } from '@prisma/client';
 import { MessageService } from '../message/message.service';
 import { CreateMessageDto } from '../message/dto/create-message.dto';
+import { RedisService } from '../redis/redis.service';
 
 @WebSocketGateway({
   cors: {
@@ -42,6 +42,7 @@ export class ChatGateway
     private configService: ConfigService,
     private conversationService: ConversationsService,
     private messageService: MessageService,
+    private redisService: RedisService,
   ) {}
   @WebSocketServer()
   server!: Server;
@@ -67,12 +68,27 @@ export class ChatGateway
       }
     });
   }
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     console.log(`Client connected ${client.id}`);
+
+    const userId = client.data.user.sub;
+
+    await this.redisService.addOnlineUser(userId);
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
+    console.log('Rooms at disconnect time:', Array.from(client.rooms)); // ← add this
+
+    const userId = client.data.user.sub;
+
+    await this.redisService.removeOnlineUser(userId);
+
+    const rooms = client.data.joinedRoom || new Set<string>();
+
+    for (const room of rooms) {
+      client.broadcast.to(room).emit('user:offline', { userId });
+    }
   }
 
   @SubscribeMessage('conversation:join')
@@ -100,6 +116,13 @@ export class ChatGateway
         );
 
       client.join(conversationId);
+
+      if (!client.data.joinedRoom) {
+        client.data.joinedRoom = new Set<string>();
+      }
+      client.data.joinedRoom.add(conversationId);
+
+      client.broadcast.to(conversationId).emit('user:online', { userId });
 
       return { success: true };
     } catch (e) {
